@@ -1,5 +1,16 @@
+package com.mijndomein.gui.scenes;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Scanner;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mijndomein.api.objects.Device;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -29,12 +40,12 @@ public class GroupDetailsScene {
 	HBox deviceGroupContainer = new HBox();
 	GridPane toggleButtonsHolder = new GridPane();
 	VBox singleDevicesContainer = new VBox();
+	private int deviceIndex;
+	private Device []deviceClusterListArray;
+	ListView<String> deviceClusterList = new ListView<String>();
 
-	ListView<String> deviceList = new ListView<String>();
-	ObservableList<String> deviceListItems =FXCollections.observableArrayList (
-	    "Camera", "Eettafel verlichting", "Garagedeur", "TV", "Camera", "Eettafel verlichting", "Garagedeur", "TV", "Camera", "Eettafel verlichting", "Garagedeur", "TV");
-	
-	public GroupDetailsScene() {
+	public GroupDetailsScene(int deviceIndex) {
+		this.deviceIndex = deviceIndex;
 		buildScene();
 	}
 	
@@ -67,7 +78,7 @@ public class GroupDetailsScene {
 		titleBox.setPrefHeight(50);
 
 		titleBox.setStyle("-fx-background-color: #0D47A1; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0.5, 4);");
-		Text title = new Text("Huiskamer - Groep");
+		Text title = new Text(DevicesScene.clusterListArray[deviceIndex].getName() + " - Groep");
 	    title.setFont(Font.font("Arial", FontWeight.BOLD, 16));
 	    title.setFill(Color.web("#FFF"));      
 	    
@@ -126,11 +137,29 @@ public class GroupDetailsScene {
 		Separator separator = new Separator();
 		Button deleteGroupButton = new Button("Groep verwijderen");
 		
-		deviceList.setItems(deviceListItems);
-		deviceList.setPrefWidth(MainStage.sceneWidth - 20);
-		deviceList.setPrefHeight(150);	
-		singleDevicesContainer.getChildren().addAll(separator, deviceGroupLabel, deviceList, deleteGroupButton);
+		deleteGroupButton.setOnAction(new EventHandler<ActionEvent>() {
+		    @Override public void handle(ActionEvent e) {
+		    	try {
+		    		deleteCluster();
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} finally {
+					MainStage.getStage().setScene(new DevicesScene().getScene());	
+				}
+		    }
+		});
+		
+		addDeviceClusterList();
+		singleDevicesContainer.getChildren().addAll(separator, deviceGroupLabel, deviceGroupContainer, deleteGroupButton);
 	}
+	
+	private void addDeviceClusterList() {		
+		deviceClusterList.setPrefWidth(MainStage.sceneWidth - 20);
+		deviceClusterList.setPrefHeight(150);
+		deviceGroupContainer.getChildren().addAll(deviceClusterList);
+	}
+	
 	
 	private void borderPaneCollector() {
 		VBox centerPane = new VBox();
@@ -141,16 +170,84 @@ public class GroupDetailsScene {
 	
 	public void initActions(){
 		//Detecting mouse clicked	
-		deviceList.setOnMouseClicked(new EventHandler<MouseEvent>(){
+		deviceClusterList.setOnMouseClicked(new EventHandler<MouseEvent>(){
 			@Override
 			public void handle(MouseEvent arg0) {
-				MainStage.getStage().setScene(new DeviceDetailScene().getScene());
+				MainStage.getStage().setScene(new DeviceDetailScene(deviceClusterList.getSelectionModel().getSelectedIndex()).getScene());
 			}
+
 		});
 	}
-		
+	
+	private void GetAllClusterDevices() throws IOException {
+		try {
+			URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/cluster/retrieve/all/components/" + DevicesScene.clusterListArray[deviceIndex].getClusterID());
+			HttpURLConnection conection = (HttpURLConnection) targetUrl.openConnection();
+			conection.setRequestMethod("GET");
+			conection.setRequestProperty("Content-Type", "application/json");
+			int responseCode = conection.getResponseCode();
+			
+			String inline = "";
+			
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				//Scanner functionality will read the JSON data from the stream
+				Scanner sc = new Scanner(targetUrl.openStream());
+				while(sc.hasNext())
+				{
+					inline+=sc.nextLine();
+				}
+														
+				ObjectMapper mapper = new ObjectMapper();
+				deviceClusterListArray = mapper.readValue(inline, Device[].class);
+				
+				for (Device device : deviceClusterListArray){
+					deviceClusterList.getItems().add(device.getName());
+				}
+
+				sc.close();								
+				
+			} else {
+				System.out.println("GET NOT WORKED");
+			}
+				
+			conection.disconnect();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		  } catch (IOException e) {
+			e.printStackTrace();
+		 }
+	}
+	
+	private void deleteCluster() {
+		try {
+			URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/cluster/remove/" + DevicesScene.clusterListArray[deviceIndex].getClusterID());
+
+			HttpURLConnection httpConnection = (HttpURLConnection) targetUrl.openConnection();
+			httpConnection.setDoOutput(true);
+			httpConnection.setRequestMethod("DELETE");
+			httpConnection.setRequestProperty("Content-Type", "application/json");
+			
+			if (httpConnection.getResponseCode() != 200) {
+				throw new RuntimeException("Failed : HTTP error code : "
+					+ httpConnection.getResponseCode());
+			}
+
+			httpConnection.disconnect();
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	}
+	
 
 	public Scene getScene() {
+		try {
+			GetAllClusterDevices();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return scene;
 	}
 	

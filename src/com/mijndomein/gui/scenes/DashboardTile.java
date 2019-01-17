@@ -1,3 +1,4 @@
+package com.mijndomein.gui.scenes;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;

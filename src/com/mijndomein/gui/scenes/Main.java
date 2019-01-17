@@ -1,3 +1,4 @@
+package com.mijndomein.gui.scenes;
 import javafx.animation.FillTransition;
 import javafx.animation.ParallelTransition;
 import javafx.animation.TranslateTransition;

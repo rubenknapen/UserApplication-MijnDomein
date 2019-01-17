@@ -1,5 +1,16 @@
+package com.mijndomein.gui.scenes;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -24,6 +35,7 @@ public class AddGroupScene {
 	Group root = new Group(); 
 	public Scene scene = new Scene(root, new MainStage().sceneWidth, new MainStage().sceneHeight);
 	BorderPane dashboardBorderPane = new BorderPane();
+	private String groupNameInputValue; 
 
 	public AddGroupScene() {
 		buildScene();
@@ -81,9 +93,64 @@ public class AddGroupScene {
 		
 		Button createGroupButton = new Button("Groep aanmaken");
 		
+		createGroupButton.setOnAction(new EventHandler<ActionEvent>() {
+		    @Override public void handle(ActionEvent e) {
+		    	try {
+		    		groupNameInputValue = groupNameInput.getText();
+		    		addNewGroup();
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+		    }
+		});
+		
 		groupNameContainer.getChildren().addAll(title, groupNameInput, createGroupButton);
 		dashboardBorderPane.setCenter(groupNameContainer);
 	}
+	
+	
+	public void addNewGroup() {
+		try {
+		URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/cluster/add");
+
+		HttpURLConnection httpConnection = (HttpURLConnection) targetUrl.openConnection();
+		httpConnection.setDoOutput(true);
+		httpConnection.setRequestMethod("POST");
+		httpConnection.setRequestProperty("Content-Type", "application/json");
+		
+		String input = "{" +
+                "\"hubID\": 1, " +
+                "\"name\": \"" + groupNameInputValue + "\"" +
+                "}";
+
+		OutputStream outputStream = httpConnection.getOutputStream();
+		outputStream.write(input.getBytes());
+		outputStream.flush();
+
+		if (httpConnection.getResponseCode() != 200) {
+			throw new RuntimeException("Failed : HTTP error code : "
+				+ httpConnection.getResponseCode());
+		}
+
+		BufferedReader responseBuffer = new BufferedReader(new InputStreamReader(
+				(httpConnection.getInputStream())));
+
+		String output;
+		System.out.println("Output from Server:\n");
+		while ((output = responseBuffer.readLine()) != null) {
+			System.out.println(output);
+		}
+		httpConnection.disconnect();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			MainStage.getStage().setScene(new DevicesScene().getScene());
+		}
+	}
+	
 		
 	public Scene getScene() {
 		return scene;

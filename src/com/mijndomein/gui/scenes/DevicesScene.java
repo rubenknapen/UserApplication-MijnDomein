@@ -1,3 +1,18 @@
+package com.mijndomein.gui.scenes;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mijndomein.api.objects.Cluster;
+import com.mijndomein.api.objects.Device;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -27,15 +42,11 @@ public class DevicesScene {
 	BorderPane dashboardBorderPane = new BorderPane();
 	HBox deviceGroupContainer = new HBox();
 	HBox SingleDevicesContainer = new HBox();
-
-	ListView<String> groupList = new ListView<>();
-	ObservableList<String> groupListItems =FXCollections.observableArrayList (
-	    "Huiskamer", "Slaapkamer", "Tuin", "Garage", "Huiskamer", "Slaapkamer", "Tuin", "Garage", "Huiskamer", "Slaapkamer", "Tuin", "Garage");
-	
+	public static Device []deviceListArray;
+	public static Cluster []clusterListArray;
 	ListView<String> deviceList = new ListView<String>();
-	ObservableList<String> deviceListItems =FXCollections.observableArrayList (
-	    "Camera", "Eettafel verlichting", "Garagedeur", "TV", "Camera", "Eettafel verlichting", "Garagedeur", "TV", "Camera", "Eettafel verlichting", "Garagedeur", "TV");
-	
+	ListView<String> clusterList = new ListView<String>();
+		
 	
 	public DevicesScene() {
 		buildScene();
@@ -98,33 +109,110 @@ public class DevicesScene {
 		Button addDeviceButton = new Button("Apparaat toevoegen");
 		addDeviceButton.setOnAction(e -> MainStage.getStage().setScene(new AddDeviceScene().getScene()));
 		
-		addGroupList();
+		addClusterList();
 		addDeviceList();
 		deviceGroupHolder.getChildren().addAll(groupName, deviceGroupContainer, addGroupButton, separator, singleDeviceName, SingleDevicesContainer, addDeviceButton);
 		dashboardBorderPane.setMargin(deviceGroupHolder, new Insets(10));
 		dashboardBorderPane.setCenter(deviceGroupHolder);
 	}
 	
-	private void addGroupList() {		
-		groupList.setItems(groupListItems);
-		groupList.setPrefWidth(MainStage.sceneWidth - 20);
-		groupList.setPrefHeight(150);
-		deviceGroupContainer.getChildren().addAll(groupList);
+	private void addClusterList() {		
+		clusterList.setPrefWidth(MainStage.sceneWidth - 20);
+		clusterList.setPrefHeight(150);
+		deviceGroupContainer.getChildren().addAll(clusterList);
 	}
 	
 	private void addDeviceList() {		
-		deviceList.setItems(deviceListItems);
 		deviceList.setPrefWidth(MainStage.sceneWidth - 20);
 		deviceList.setPrefHeight(150);	
 		SingleDevicesContainer.getChildren().addAll(deviceList);
 	}
 	
-	public void initActions(){
+	
+	private void GetAllClusters() throws IOException {
+		try {
+			URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/cluster/retrieve/all/1");
+			HttpURLConnection conection = (HttpURLConnection) targetUrl.openConnection();
+			conection.setRequestMethod("GET");
+			conection.setRequestProperty("Content-Type", "application/json");
+			int responseCode = conection.getResponseCode();
+			
+			String inline = "";
+			
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				//Scanner functionality will read the JSON data from the stream
+				Scanner sc = new Scanner(targetUrl.openStream());
+				while(sc.hasNext())
+				{
+					inline+=sc.nextLine();
+				}
+														
+				ObjectMapper mapper = new ObjectMapper();
+				clusterListArray = mapper.readValue(inline, Cluster[].class);
+				
+				for (Cluster cluster : clusterListArray){
+					clusterList.getItems().add(cluster.getName());
+				}
+
+				sc.close();								
+				
+			} else {
+				System.out.println("GET NOT WORKED");
+			}
+				
+			conection.disconnect();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		  } catch (IOException e) {
+			e.printStackTrace();
+		 }
+	}
+	
+	private void GetAllDevices() throws IOException {
+		try {
+			URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/component/retrieve/all/1");
+			HttpURLConnection conection = (HttpURLConnection) targetUrl.openConnection();
+			conection.setRequestMethod("GET");
+			conection.setRequestProperty("Content-Type", "application/json");
+			int responseCode = conection.getResponseCode();
+			
+			String inline = "";
+			
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				//Scanner functionality will read the JSON data from the stream
+				Scanner sc = new Scanner(targetUrl.openStream());
+				while(sc.hasNext())
+				{
+					inline+=sc.nextLine();
+				}
+														
+				ObjectMapper mapper = new ObjectMapper();
+				deviceListArray = mapper.readValue(inline, Device[].class);
+				
+				for (Device device : deviceListArray){
+					deviceList.getItems().add(device.getName());
+				}
+
+				sc.close();								
+				
+			} else {
+				System.out.println("GET NOT WORKED");
+			}
+				
+			conection.disconnect();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		  } catch (IOException e) {
+			e.printStackTrace();
+		 }
+	}
+	
+	private void initActions(){
 		//Detecting mouse clicked
-		groupList.setOnMouseClicked(new EventHandler<MouseEvent>(){
+		clusterList.setOnMouseClicked(new EventHandler<MouseEvent>(){
 			@Override
 			public void handle(MouseEvent arg0) {
-				MainStage.getStage().setScene(new GroupDetailsScene().getScene());
+				MainStage.getStage().setScene(new GroupDetailsScene(clusterList.getSelectionModel().getSelectedIndex()).getScene());
 			}
 
 		});
@@ -132,12 +220,19 @@ public class DevicesScene {
 		deviceList.setOnMouseClicked(new EventHandler<MouseEvent>(){
 			@Override
 			public void handle(MouseEvent arg0) {
-				MainStage.getStage().setScene(new DeviceDetailScene().getScene());
+				MainStage.getStage().setScene(new DeviceDetailScene(deviceList.getSelectionModel().getSelectedIndex()).getScene());
 			}
 		});
 	}
 		
 	public Scene getScene() {
+		try {
+			GetAllDevices();
+			GetAllClusters();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return scene;
 	}
 	

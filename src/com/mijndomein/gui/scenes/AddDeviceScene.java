@@ -1,3 +1,4 @@
+package com.mijndomein.gui.scenes;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -33,7 +34,6 @@ import java.net.URL;
 public class AddDeviceScene {
 	
 	Group root = new Group(); 
-	private static final String targetURL = "http://localhost:8080/MijnDomeinServer6/restservices/domotica/component/add";
 	public Scene scene = new Scene(root, new MainStage().sceneWidth, new MainStage().sceneHeight);
 	BorderPane dashboardBorderPane = new BorderPane();
 	private String deviceNameInputValue; 
@@ -119,7 +119,7 @@ public class AddDeviceScene {
 		    		deviceNameInputValue = deviceNameInput.getText();
 		    		devicePortInputValue = devicePortInput.getText();
 		    		deviceTypeSelectorValue = (String)deviceTypeSelector.getSelectionModel().getSelectedItem();
-		    		test();
+		    		addNewDevice();
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -131,28 +131,24 @@ public class AddDeviceScene {
 		groupNameContainer.getChildren().addAll(deviceName, deviceNameInput, deviceTypeLabel, deviceTypeSelector, devicePortLabel, devicePortInput, createDeviceButton);
 		dashboardBorderPane.setCenter(groupNameContainer);
 	}
-	
-	public void test() {
+		
+	private void addNewDevice() {
 		try {
-		URL targetUrl = new URL(targetURL);
+		URL targetUrl = new URL("http://localhost:8080/MijnDomeinServer6/restservices/domotica/component/add");
 
 		HttpURLConnection httpConnection = (HttpURLConnection) targetUrl.openConnection();
 		httpConnection.setDoOutput(true);
 		httpConnection.setRequestMethod("POST");
 		httpConnection.setRequestProperty("Content-Type", "application/json");
-
-		//deviceNameInput.getText();		
+		
 		String input = "{" +
-                "\"hubID\": 23123, " +
-                "\"clusterID\": 23123, " +
+                "\"hubID\": 1, " +
+                "\"clusterID\": 1, " +
                 "\"name\": \"" + deviceNameInputValue + "\", " +
                 "\"type\": \"" + deviceTypeSelectorValue + "\", " +
                 "\"port\": " + devicePortInputValue + ", " +
                 "\"status\": \"Uit\"" +
                 "}";
-		
-		System.out.println(input);
-
 
 		OutputStream outputStream = httpConnection.getOutputStream();
 		outputStream.write(input.getBytes());
@@ -171,17 +167,14 @@ public class AddDeviceScene {
 		while ((output = responseBuffer.readLine()) != null) {
 			System.out.println(output);
 		}
-
 		httpConnection.disconnect();
 		} catch (MalformedURLException e) {
-
 			e.printStackTrace();
-
-		  } catch (IOException e) {
-
+		} catch (IOException e) {
 			e.printStackTrace();
-
-		 }
+		} finally {
+			MainStage.getStage().setScene(new DevicesScene().getScene());	
+		}
 	}
 	
 	public Scene getScene() {

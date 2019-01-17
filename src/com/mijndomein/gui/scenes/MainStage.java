@@ -1,3 +1,4 @@
+package com.mijndomein.gui.scenes;
 import javafx.application.Application;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
@@ -14,7 +15,7 @@ public class MainStage extends Application {
     	this.stage = primaryStage;
     	stage.getIcons().add(new Image("file:src/img/favicon.png"));
     	primaryStage.setTitle("Huiscentrale App");
-        primaryStage.setScene(new AddDeviceScene().getScene());
+        primaryStage.setScene(new DevicesScene().getScene());
         primaryStage.setResizable(false);
         primaryStage.show();
     }
